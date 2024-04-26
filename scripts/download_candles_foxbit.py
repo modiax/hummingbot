@@ -2,6 +2,8 @@ import asyncio
 import os
 from typing import Dict
 
+import pandas as pd
+
 from hummingbot import data_path
 from hummingbot.client.hummingbot_application import HummingbotApplication
 from hummingbot.connector.connector_base import ConnectorBase
@@ -19,9 +21,9 @@ class DownloadCandles(ScriptStrategyBase):
     use it in production based on candles needed to compute technical indicators.
     """
     exchange = os.getenv("EXCHANGE", "foxbit")
-    trading_pairs = os.getenv("TRADING_PAIRS", "SHIB-BRL").split(",")
-    intervals = os.getenv("INTERVALS", "5m").split(",")
-    max_records = int(os.getenv("MAX_RECORDS", "1000"))
+    trading_pairs = os.getenv("TRADING_PAIRS", "BTC-BRL").split(",")
+    intervals = os.getenv("INTERVALS", "1h").split(",")
+    max_records = int(os.getenv("MAX_RECORDS", "1002"))
     # we can initialize any trading pair since we only need the candles
     markets = {"binance_paper_trade": {"BTC-USDT"}}
 
@@ -41,7 +43,6 @@ class DownloadCandles(ScriptStrategyBase):
                 "csv_path"] = data_path() + f"/candles_{self.exchange}_{combination[0]}_{combination[1]}.csv"
         safe_ensure_future(self.initialize_candles_with_delay())
 
-
     async def initialize_candles_with_delay(self):
         for trading_pair, candles_info in self.candles.items():
             candles_info["candles"].start()
@@ -55,6 +56,7 @@ class DownloadCandles(ScriptStrategyBase):
                 pass
             else:
                 df = candles_info["candles"].candles_df
+                df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
                 df.to_csv(candles_info["csv_path"], index=False)
         if all(candles_info["candles"].ready for candles_info in self.candles.values()):
             HummingbotApplication.main_application().stop()

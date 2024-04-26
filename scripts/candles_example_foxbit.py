@@ -3,6 +3,7 @@ from typing import Dict
 import pandas as pd
 import pandas_ta as ta  # noqa: F401
 
+from hummingbot import data_path
 from hummingbot.connector.connector_base import ConnectorBase
 from hummingbot.data_feed.candles_feed.candles_factory import CandlesConfig, CandlesFactory
 from hummingbot.strategy.script_strategy_base import ScriptStrategyBase
@@ -24,9 +25,10 @@ class CandlesExample(ScriptStrategyBase):
     # Is possible to use the Candles Factory to create the candlestick that you want, and then you have to start it.
     # Also, you can use the class directly like BinancePerpetualsCandles(trading_pair, interval, max_records), but
     # this approach is better if you want to initialize multiple candles with a list or dict of configurations.
-    eth_1m_candles = CandlesFactory.get_candle(CandlesConfig(connector="foxbit", trading_pair="BTC-BRL", interval="1m", max_records=500))
-    eth_1h_candles = CandlesFactory.get_candle(CandlesConfig(connector="foxbit", trading_pair="BTC-BRL", interval="1h", max_records=500))
-    eth_1w_candles = CandlesFactory.get_candle(CandlesConfig(connector="foxbit", trading_pair="BTC-BRL", interval="12h", max_records=500))
+    # eth_1m_candles = CandlesFactory.get_candle(CandlesConfig(connector="foxbit", trading_pair="BTC-BRL", interval="1m", max_records=1002))
+    eth_1h_candles = CandlesFactory.get_candle(
+        CandlesConfig(connector="foxbit", trading_pair="BTC-BRL", interval="1h", max_records=1001))
+    # eth_1w_candles = CandlesFactory.get_candle(CandlesConfig(connector="foxbit", trading_pair="BTC-BRL", interval="12h", max_records=1002))
 
     # The markets are the connectors that you can use to execute all the methods of the scripts strategy base
     # The candlesticks are just a component that provides the information of the candlesticks
@@ -35,9 +37,9 @@ class CandlesExample(ScriptStrategyBase):
     def __init__(self, connectors: Dict[str, ConnectorBase]):
         # Is necessary to start the Candles Feed.
         super().__init__(connectors)
-        self.eth_1m_candles.start()
+        # self.eth_1m_candles.start()
         self.eth_1h_candles.start()
-        self.eth_1w_candles.start()
+        # self.eth_1w_candles.start()
 
     @property
     def all_candles_ready(self):
@@ -45,7 +47,7 @@ class CandlesExample(ScriptStrategyBase):
         Checks if the candlesticks are full.
         :return:
         """
-        return all([self.eth_1h_candles.ready, self.eth_1m_candles.ready, self.eth_1w_candles.ready])
+        return all([self.eth_1h_candles.ready])
 
     def on_tick(self):
         pass
@@ -56,9 +58,9 @@ class CandlesExample(ScriptStrategyBase):
         That's why is necessary to introduce this new feature to make a custom stop with the strategy.
         :return:
         """
-        self.eth_1m_candles.stop()
+        # self.eth_1m_candles.stop()
         self.eth_1h_candles.stop()
-        self.eth_1w_candles.stop()
+        # self.eth_1w_candles.stop()
 
     def format_status(self) -> str:
         """
@@ -68,8 +70,9 @@ class CandlesExample(ScriptStrategyBase):
             return "Market connectors are not ready."
         lines = []
         if self.all_candles_ready:
-            lines.extend(["\n############################################ Market Data ############################################\n"])
-            for candles in [self.eth_1w_candles, self.eth_1m_candles, self.eth_1h_candles]:
+            lines.extend([
+                "\n############################################ Market Data ############################################\n"])
+            for candles in [self.eth_1h_candles]:  # [self.eth_1w_candles, self.eth_1m_candles, self.eth_1h_candles]:
                 candles_df = candles.candles_df
                 # Let's add some technical indicators
                 candles_df.ta.rsi(length=14, append=True)
@@ -78,7 +81,10 @@ class CandlesExample(ScriptStrategyBase):
                 candles_df["timestamp"] = pd.to_datetime(candles_df["timestamp"], unit="ms")
                 lines.extend([f"Candles: {candles.name} | Interval: {candles.interval}"])
                 lines.extend(["    " + line for line in candles_df.tail().to_string(index=False).split("\n")])
-                lines.extend(["\n-----------------------------------------------------------------------------------------------------------\n"])
+                lines.extend([
+                    "\n-----------------------------------------------------------------------------------------------------------\n"])
+                df = candles_df
+                df.to_csv(data_path() + "/" + candles.name + candles.interval + ".csv", index=False)
         else:
             lines.extend(["", "  No data collected."])
 

@@ -1,12 +1,14 @@
 import asyncio
 import json
 import logging
+from datetime import datetime
 from typing import Optional
 
 import numpy as np
+import pandas as pd
 from bidict import bidict
 
-from hummingbot.core.network_iterator import NetworkStatus, safe_ensure_future
+from hummingbot.core.network_iterator import NetworkStatus
 from hummingbot.core.web_assistant.connections.data_types import WSJSONRequest
 from hummingbot.core.web_assistant.ws_assistant import WSAssistant
 from hummingbot.data_feed.candles_feed.candles_base import CandlesBase
@@ -74,6 +76,11 @@ class FoxbitSpotCandles(CandlesBase):
     def intervals(self):
         return CONSTANTS.INTERVALS
 
+    @property
+    def candles_df(self) -> pd.DataFrame:
+        df = pd.DataFrame(self._candles, columns=self.columns, dtype=float)
+        return df.sort_values(by="timestamp", ascending=True)
+
     async def check_network(self) -> NetworkStatus:
         rest_assistant = await self._api_factory.get_rest_assistant()
         await rest_assistant.execute_request(url=self.health_check_url,
@@ -106,9 +113,9 @@ class FoxbitSpotCandles(CandlesBase):
         rest_assistant = await self._api_factory.get_rest_assistant()
         params = {"interval": CONSTANTS.INTERVALS[self.interval], "limit": min(limit, CONSTANTS.MAX_RECORDS)}
         if start_time:
-            params["start_time"] = start_time
+            params["start_time"] = datetime.utcfromtimestamp(start_time / 1000).isoformat()
         if end_time:
-            params["end_time"] = end_time
+            params["end_time"] = datetime.utcfromtimestamp(end_time / 1000).isoformat()
         candles = await rest_assistant.execute_request(
             url=self.candles_url.format(self.get_exchange_trading_pair(self._trading_pair)),
             throttler_limit_id=CONSTANTS.CANDLES_ENDPOINT,
@@ -137,12 +144,9 @@ class FoxbitSpotCandles(CandlesBase):
             end_timestamp = int(self._candles[0][0])
             try:
                 if requests_executed < max_request_needed:
-                    # we have to add one more since, the last row is not going to be included
-                    candles = await self.fetch_candles(end_time=end_timestamp, limit=missing_records + 1)
-                    # we are computing again the quantity of records again since the websocket process is able to
-                    # modify the deque and if we extend it, the new observations are going to be dropped.
+                    candles = await self.fetch_candles(end_time=end_timestamp, limit=missing_records)
                     missing_records = self._candles.maxlen - len(self._candles)
-                    self._candles.extendleft(candles[-(missing_records + 1):-1][::-1])
+                    self._candles.extendleft(candles[-missing_records:][::-1])
                     requests_executed += 1
                 else:
                     self.logger().error(f"There is no data available for the quantity of "
@@ -150,7 +154,7 @@ class FoxbitSpotCandles(CandlesBase):
                     raise
             except asyncio.CancelledError:
                 raise
-            except Exception as ex:
+            except Exception:
                 self.logger().exception(
                     "Unexpected error occurred when getting historical candles. Retrying in 1 seconds...",
                 )
@@ -172,7 +176,7 @@ class FoxbitSpotCandles(CandlesBase):
                 "o": json.dumps({"OMSId": 1,
                                  "InstrumentId": instrument_id,
                                  "Interval": self.get_seconds_from_interval(self.interval),
-                                 "IncludeLastCount": 1}),
+                                 "IncludeLastCount": 2}),
             }
             subscribe_candles_request: WSJSONRequest = WSJSONRequest(payload=payload)
             await ws.send(subscribe_candles_request)
@@ -189,7 +193,7 @@ class FoxbitSpotCandles(CandlesBase):
     async def _process_websocket_messages(self, websocket_assistant: WSAssistant):
         async for ws_response in websocket_assistant.iter_messages():
             candle_data_list = json.loads(ws_response.data.get('o', '[]'))
-            if len(candle_data_list) > 0:
+            if len(candle_data_list) > 1:
                 candle_data = candle_data_list[0]
                 if isinstance(candle_data, list) and len(candle_data) >= 6:
                     timestamp = int(candle_data[0])
@@ -203,18 +207,15 @@ class FoxbitSpotCandles(CandlesBase):
                     n_trades = 0
                     taker_buy_base_volume = 0
                     taker_buy_quote_volume = 0
+                    candles_row = np.array([timestamp, open, high, low, close, volume,
+                                            quote_asset_volume, n_trades, taker_buy_base_volume,
+                                            taker_buy_quote_volume])
                     if len(self._candles) == 0:
-                        self._candles.append(np.array([timestamp, open, high, low, close, volume,
-                                                       quote_asset_volume, n_trades, taker_buy_base_volume,
-                                                       taker_buy_quote_volume]))
-                        safe_ensure_future(self.fill_historical_candles())
+                        self._candles.append(candles_row)
+                        await self.fill_historical_candles()
                     elif timestamp > int(self._candles[-1][0]):
                         # TODO: validate also that the diff of timestamp == interval (issue with 1M interval).
-                        self._candles.append(np.array([timestamp, open, high, low, close, volume,
-                                                       quote_asset_volume, n_trades, taker_buy_base_volume,
-                                                       taker_buy_quote_volume]))
+                        self._candles.append(candles_row)
                     elif timestamp == int(self._candles[-1][0]):
                         self._candles.pop()
-                        self._candles.append(np.array([timestamp, open, high, low, close, volume,
-                                                       quote_asset_volume, n_trades, taker_buy_base_volume,
-                                                       taker_buy_quote_volume]))
+                        self._candles.append(candles_row)
