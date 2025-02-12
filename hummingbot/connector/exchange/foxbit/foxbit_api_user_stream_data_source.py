@@ -48,6 +48,7 @@ class FoxbitAPIUserStreamDataSource(UserStreamTrackerDataSource):
             ws: WSAssistant = await self._api_factory.get_ws_assistant()
             await ws.connect(ws_url=web_utils.websocket_url(), ping_timeout=CONSTANTS.WS_HEARTBEAT_TIME_INTERVAL)
 
+            await self._sleep(1.0)
             header = utils.get_ws_message_frame(
                 endpoint=CONSTANTS.WS_AUTHENTICATE_USER,
                 msg_type=CONSTANTS.WS_MESSAGE_FRAME_TYPE["Request"],
@@ -62,9 +63,8 @@ class FoxbitAPIUserStreamDataSource(UserStreamTrackerDataSource):
             if ret_value.data.get('o'):
                 is_authenticated = utils.ws_data_to_dict(ret_value.data.get('o'))["Authenticated"]
 
-            await ws.ping()  # to update
-
             if is_authenticated:
+                self.logger().info("Authenticated to Foxbit User Stream Data...")
                 return ws
             else:
                 self.logger().info("Some issue happens when try to subscribe at Foxbit User Stream Data, check your credentials.")
@@ -86,6 +86,7 @@ class FoxbitAPIUserStreamDataSource(UserStreamTrackerDataSource):
         :param websocket_assistant: the websocket assistant used to connect to the exchange
         """
         try:
+            await self._sleep(1.0)
             # Subscribe Account, Orders and Trade Events
             header = utils.get_ws_message_frame(
                 endpoint=CONSTANTS.WS_SUBSCRIBE_ACCOUNT,

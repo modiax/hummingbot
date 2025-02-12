@@ -1,4 +1,4 @@
-from hummingbot.core.api_throttler.data_types import LinkedLimitWeightPair, RateLimit
+from hummingbot.core.api_throttler.data_types import RateLimit
 from hummingbot.core.data_type.in_flight_order import OrderState
 
 DEFAULT_DOMAIN = "com.br"
@@ -8,18 +8,19 @@ USER_AGENT = "HBOT"
 MAX_ORDER_ID_LEN = 20
 
 # Base URL
-REST_URL = "api.foxbit.com.br"
+REST_URL = "https://api.foxbit.com.br"
+REST_V2_URL = "https://api.foxbit.com.br/AP"
 WSS_URL = "api.foxbit.com.br"
 
 PUBLIC_API_VERSION = "v3"
 PRIVATE_API_VERSION = "v3"
 
 # Public API endpoints or FoxbitClient function
-TICKER_PRICE_CHANGE_PATH_URL = "SubscribeLevel1"
 EXCHANGE_INFO_PATH_URL = "markets"
 PING_PATH_URL = "system/time"
 SNAPSHOT_PATH_URL = "markets/{}/orderbook"
 SERVER_TIME_PATH_URL = "system/time"
+INSTRUMENTS_PATH_URL = "GetInstruments"
 
 # Private API endpoints or FoxbitClient function
 ACCOUNTS_PATH_URL = "accounts"
@@ -27,7 +28,6 @@ MY_TRADES_PATH_URL = "trades"
 ORDER_PATH_URL = "orders"
 CANCEL_ORDER_PATH_URL = "orders/cancel"
 GET_ORDER_BY_CLIENT_ID = "orders/by-client-order-id/{}"
-GET_ORDER_BY_ID = "orders/by-order-id/{}"
 
 WS_HEADER = {
     "Content-Type": "application/json",
@@ -43,42 +43,22 @@ WS_MESSAGE_FRAME_TYPE = {
 }
 
 WS_MESSAGE_FRAME = {
-    "m": 0,                 # WS_MESSAGE_FRAME_TYPE
-    "i": 0,                 # Sequence Number
-    "n": "",                # Endpoint
-    "o": "",                # Message Payload
-}
-
-WS_CHANNELS = {
-    "USER_STREAM": [
-        "balance:all",
-        "position:all",
-        "order:all",
-    ]
+    "m": 0,  # WS_MESSAGE_FRAME_TYPE
+    "i": 0,  # Sequence Number
+    "n": "",  # Endpoint
+    "o": "",  # Message Payload
 }
 
 WS_HEARTBEAT_TIME_INTERVAL = 20
 
-# Binance params
-
 SIDE_BUY = 'BUY'
 SIDE_SELL = 'SELL'
-
-TIME_IN_FORCE_GTC = 'GTC'  # Good till cancelled
-TIME_IN_FORCE_IOC = 'IOC'  # Immediate or cancel
-TIME_IN_FORCE_FOK = 'FOK'  # Fill or kill
-
-# Rate Limit Type
-REQUEST_WEIGHT = "REQUEST_WEIGHT"
-ORDERS = "ORDERS"
-ORDERS_24HR = "ORDERS_24HR"
 
 # Rate Limit time intervals
 ONE_MINUTE = 60
 ONE_SECOND = 1
+TWO_SECONDS = 2
 ONE_DAY = 86400
-
-MAX_REQUEST = 100
 
 # Order States
 ORDER_STATE = {
@@ -89,7 +69,7 @@ ORDER_STATE = {
     "PARTIALLY_FILLED": OrderState.PARTIALLY_FILLED,
     "PENDING_CANCEL": OrderState.OPEN,
     "CANCELED": OrderState.CANCELED,
-    "PARTIALLY_CANCELED": OrderState.PARTIALLY_FILLED,
+    "PARTIALLY_CANCELED": OrderState.CANCELED,
     "REJECTED": OrderState.FAILED,
     "EXPIRED": OrderState.FAILED,
     "Unknown": OrderState.PENDING_CREATE,
@@ -119,38 +99,17 @@ WS_TRADE_RESPONSE = "TradeDataUpdateEvent"
 ORDER_BOOK_DEPTH = 10
 
 RATE_LIMITS = [
-    # Pools
-    RateLimit(limit_id=REQUEST_WEIGHT, limit=1200, time_interval=ONE_MINUTE),
-    RateLimit(limit_id=ORDERS, limit=100, time_interval=ONE_SECOND),
-    RateLimit(limit_id=ORDERS_24HR, limit=100000, time_interval=ONE_DAY),
-    # Weighted Limits
-    RateLimit(limit_id=TICKER_PRICE_CHANGE_PATH_URL, limit=MAX_REQUEST, time_interval=ONE_MINUTE,
-              linked_limits=[LinkedLimitWeightPair(REQUEST_WEIGHT, 40)]),
-    RateLimit(limit_id=EXCHANGE_INFO_PATH_URL, limit=MAX_REQUEST, time_interval=ONE_MINUTE,
-              linked_limits=[(LinkedLimitWeightPair(REQUEST_WEIGHT, 10))]),
-    RateLimit(limit_id=SNAPSHOT_PATH_URL, limit=MAX_REQUEST, time_interval=ONE_MINUTE,
-              linked_limits=[LinkedLimitWeightPair(REQUEST_WEIGHT, 50)]),
-    RateLimit(limit_id=SERVER_TIME_PATH_URL, limit=MAX_REQUEST, time_interval=ONE_MINUTE,
-              linked_limits=[LinkedLimitWeightPair(REQUEST_WEIGHT, 1)]),
-    RateLimit(limit_id=PING_PATH_URL, limit=MAX_REQUEST, time_interval=ONE_MINUTE,
-              linked_limits=[LinkedLimitWeightPair(REQUEST_WEIGHT, 1)]),
-    RateLimit(limit_id=ACCOUNTS_PATH_URL, limit=MAX_REQUEST, time_interval=ONE_MINUTE,
-              linked_limits=[LinkedLimitWeightPair(REQUEST_WEIGHT, 10)]),
-    RateLimit(limit_id=MY_TRADES_PATH_URL, limit=MAX_REQUEST, time_interval=ONE_MINUTE,
-              linked_limits=[LinkedLimitWeightPair(REQUEST_WEIGHT, 10)]),
-    RateLimit(limit_id=GET_ORDER_BY_ID, limit=MAX_REQUEST, time_interval=ONE_MINUTE,
-              linked_limits=[LinkedLimitWeightPair(REQUEST_WEIGHT, 10)]),
-    RateLimit(limit_id=CANCEL_ORDER_PATH_URL, limit=MAX_REQUEST, time_interval=ONE_MINUTE,
-              linked_limits=[LinkedLimitWeightPair(REQUEST_WEIGHT, 10)]),
-    RateLimit(limit_id=ORDER_PATH_URL, limit=MAX_REQUEST, time_interval=ONE_MINUTE,
-              linked_limits=[LinkedLimitWeightPair(REQUEST_WEIGHT, 1),
-                             LinkedLimitWeightPair(ORDERS, 1),
-                             LinkedLimitWeightPair(ORDERS_24HR, 1)]),
+    RateLimit(limit_id=EXCHANGE_INFO_PATH_URL, limit=6, time_interval=ONE_SECOND),
+    RateLimit(limit_id=SNAPSHOT_PATH_URL, limit=10, time_interval=TWO_SECONDS),
+    RateLimit(limit_id=SERVER_TIME_PATH_URL, limit=5, time_interval=ONE_SECOND),
+    RateLimit(limit_id=PING_PATH_URL, limit=5, time_interval=ONE_SECOND),
+    RateLimit(limit_id=ACCOUNTS_PATH_URL, limit=15, time_interval=ONE_SECOND),
+    RateLimit(limit_id=MY_TRADES_PATH_URL, limit=5, time_interval=ONE_SECOND),
+    RateLimit(limit_id=GET_ORDER_BY_CLIENT_ID, limit=30, time_interval=TWO_SECONDS),
+    RateLimit(limit_id=CANCEL_ORDER_PATH_URL, limit=30, time_interval=TWO_SECONDS),
+    RateLimit(limit_id=ORDER_PATH_URL, limit=30, time_interval=TWO_SECONDS),
+    RateLimit(limit_id=INSTRUMENTS_PATH_URL, limit=750, time_interval=ONE_MINUTE),
 ]
 
 # Error codes
-ORDER_NOT_EXIST_ERROR_CODE = -2013
-ORDER_NOT_EXIST_MESSAGE = "Order does not exist"
-
-UNKNOWN_ORDER_ERROR_CODE = -2011
-UNKNOWN_ORDER_MESSAGE = "Unknown order sent"
+ORDER_NOT_EXIST_MESSAGE = "HTTP status is 404"

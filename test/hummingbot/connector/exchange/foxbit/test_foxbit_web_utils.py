@@ -12,13 +12,18 @@ class FoxbitUtilTestCases(unittest.TestCase):
     def test_public_rest_url(self):
         path_url = "TEST_PATH"
         domain = "com.br"
-        expected_url = f"https://{CONSTANTS.REST_URL}/rest/{CONSTANTS.PUBLIC_API_VERSION}/{path_url}"
+        expected_url = f"{CONSTANTS.REST_URL}/rest/{CONSTANTS.PUBLIC_API_VERSION}/{path_url}"
         self.assertEqual(expected_url, web_utils.public_rest_url(path_url, domain))
+
+    def test_public_rest_v2_url(self):
+        path_url = "TEST_PATH"
+        expected_url = f"{CONSTANTS.REST_V2_URL}/{path_url}"
+        self.assertEqual(expected_url, web_utils.public_rest_v2_url(path_url))
 
     def test_private_rest_url(self):
         path_url = "TEST_PATH"
         domain = "com.br"
-        expected_url = f"https://{CONSTANTS.REST_URL}/rest/{CONSTANTS.PRIVATE_API_VERSION}/{path_url}"
+        expected_url = f"{CONSTANTS.REST_URL}/rest/{CONSTANTS.PRIVATE_API_VERSION}/{path_url}"
         self.assertEqual(expected_url, web_utils.private_rest_url(path_url, domain))
 
     def test_rest_endpoint_url(self):

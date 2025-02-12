@@ -81,7 +81,7 @@ class FoxbitUtilTestCases(unittest.TestCase):
         self.assertEqual(OrderState.PARTIALLY_FILLED, utils.get_order_state('PARTIALLY_FILLED'))
         self.assertEqual(OrderState.OPEN, utils.get_order_state('PENDING_CANCEL'))
         self.assertEqual(OrderState.CANCELED, utils.get_order_state('CANCELED'))
-        self.assertEqual(OrderState.PARTIALLY_FILLED, utils.get_order_state('PARTIALLY_CANCELED'))
+        self.assertEqual(OrderState.CANCELED, utils.get_order_state('PARTIALLY_CANCELED'))
         self.assertEqual(OrderState.FAILED, utils.get_order_state('REJECTED'))
         self.assertEqual(OrderState.FAILED, utils.get_order_state('EXPIRED'))
         self.assertEqual(OrderState.PENDING_CREATE, utils.get_order_state('Unknown'))

@@ -18,7 +18,16 @@ def public_rest_url(path_url: str,
     :param domain: The default value is "com.br". Not in use at this time.
     :return: the full URL to the endpoint
     """
-    return f"https://{CONSTANTS.REST_URL}/rest/{CONSTANTS.PUBLIC_API_VERSION}/{path_url}"
+    return f"{CONSTANTS.REST_URL}/rest/{CONSTANTS.PUBLIC_API_VERSION}/{path_url}"
+
+
+def public_rest_v2_url(path_url: str) -> str:
+    """
+    Creates a full URL for provided public REST V2 endpoint
+    :param path_url: a public REST endpoint
+    :return: the full URL to the endpoint
+    """
+    return f"{CONSTANTS.REST_V2_URL}/{path_url}"
 
 
 def private_rest_url(path_url: str,
@@ -30,7 +39,7 @@ def private_rest_url(path_url: str,
     :param domain: The default value is "com.br". Not in use at this time.
     :return: the full URL to the endpoint
     """
-    return f"https://{CONSTANTS.REST_URL}/rest/{CONSTANTS.PRIVATE_API_VERSION}/{path_url}"
+    return f"{CONSTANTS.REST_URL}/rest/{CONSTANTS.PRIVATE_API_VERSION}/{path_url}"
 
 
 def rest_endpoint_url(full_url: str,
@@ -40,7 +49,7 @@ def rest_endpoint_url(full_url: str,
     :param full_url: a full url
     :return: the URL endpoint
     """
-    url_size = len(f"https://{CONSTANTS.REST_URL}")
+    url_size = len(CONSTANTS.REST_URL)
     return full_url[url_size:]
 
 

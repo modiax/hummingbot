@@ -2,7 +2,7 @@ import asyncio
 import json
 import unittest
 from typing import Any, Awaitable, Dict, Optional
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch, AsyncMock
 
 from bidict import bidict
 
@@ -18,6 +18,7 @@ from hummingbot.core.api_throttler.async_throttler import AsyncThrottler
 from hummingbot.core.web_assistant.ws_assistant import WSAssistant
 
 
+@patch("hummingbot.connector.exchange.foxbit.foxbit_api_user_stream_data_source.FoxbitAPIUserStreamDataSource._sleep", new_callable=AsyncMock)
 class FoxbitUserStreamDataSourceUnitTests(unittest.TestCase):
     # the level is required to receive logs from the data source logger
     level = 0
@@ -127,10 +128,10 @@ class FoxbitUserStreamDataSourceUnitTests(unittest.TestCase):
         }
         return resp
 
-    def test_user_stream_properties(self):
+    def test_user_stream_properties(self, mock_sleep):
         self.assertEqual(self.data_source.ready, self.data_source._user_stream_data_source_initialized)
 
-    async def test_run_ws_assistant(self):
+    async def test_run_ws_assistant(self, mock_sleep):
         ws: WSAssistant = await self.data_source._connected_websocket_assistant()
         self.assertIsNotNone(ws)
         await self.data_source._subscribe_channels(ws)
